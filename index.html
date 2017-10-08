@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<canvas></canvas>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+    const SIZES = {
+        RADIUS: 5,              // Radius of circles between connected particles
+        START_ANGLE: 0,         // Value of start circle point
+        END_ANGLE: 2 * Math.PI, // Value of end circle point
+        MIN_DISTANCE: 80,       // Max distance between connected partials
+        MAX_DISTANCE: 100,      // Min distance between connected partials
+        PARTIALS_QUANTITY: 200  // Represent quantity of partials
+    };
+
+    const canvas = document.querySelector('canvas');
+    const context = canvas.getContext('2d');
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const hypotenuse2 = SIZES.MAX_DISTANCE * SIZES.MAX_DISTANCE;
+    const colorScheme = d3.scaleOrdinal(d3.schemeCategory20c);
+    // Create partials data
+    const particles = Array.from(new Array(SIZES.PARTIALS_QUANTITY), () => {
+        return {
+            x0: Math.random() * width,
+            y0: Math.random() * height,
+            vy: Math.random() * (0.01 + 0.02) - 0.02,
+            vx: Math.random() * (0.02 + 0.02) - 0.02
+        }
+    });
+
+    canvas.width = width;
+    canvas.height = height;
+
+    d3.timer(elapsed => {
+        context.clearRect(0, 0, width, height);
+        context.fillStyle = '#000000';
+        context.fillRect(0, 0, width, height);
+
+        particles.map(p0 => {
+            particles.map(p1 => {
+                const dx = p0.x - p1.x;
+                const dy = p0.y - p1.y;
+                const d2 = dx * dx + dy * dy;
+
+                if (d2 > hypotenuse2) return;
+
+                context.globalAlpha = d2 > SIZES.MIN_DISTANCE ? (hypotenuse2 - d2) / (hypotenuse2 - SIZES.MIN_DISTANCE) : 1;
+
+                context.beginPath();
+                context.moveTo(p0.x, p0.y);
+                context.lineTo(p1.x, p1.y);
+                context.strokeStyle = colorScheme(p0.x);
+                context.stroke();
+
+            })
+        });
+
+        context.globalAlpha = 1;
+
+        particles.forEach(partial => {
+            partial.y = partial.y0 + elapsed * partial.vy;
+            partial.x = partial.x0 + elapsed * partial.vx;
+
+            if (partial.y > (height + SIZES.MAX_DISTANCE)) {
+                partial.y0 -= height + 2 * SIZES.MAX_DISTANCE;
+            } else if (partial.y < -SIZES.MAX_DISTANCE) {
+                partial.y0 += height + 2 * SIZES.MAX_DISTANCE;
+            }
+
+            if (partial.x > (width + SIZES.MAX_DISTANCE)) {
+                partial.x0 -= width + 2 * SIZES.MAX_DISTANCE;
+            } else if (partial.x < -SIZES.MAX_DISTANCE) {
+                partial.x0 += width + 2 * SIZES.MAX_DISTANCE;
+            }
+
+
+            context.beginPath();
+            context.arc(partial.x, partial.y, SIZES.RADIUS, SIZES.START_ANGLE, SIZES.END_ANGLE);
+            context.fillStyle = colorScheme(partial.x);
+            context.fill();
+        });
+    });
+</script>
